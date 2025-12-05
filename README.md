@@ -1,0 +1,436 @@
+# Three-Tier Web Application on Azure Kubernetes Service (AKS)
+
+A complete **React + Node.js + MongoDB** three-tier cloud-native application deployed on **Azure Kubernetes Service (AKS)** using:
+
+✅ Docker (ARM → AMD64)
+✅ Azure Container Registry (ACR)
+✅ Kubernetes Deployments & Services
+✅ NGINX Ingress Controller
+✅ MongoDB Atlas
+✅ Terraform (for AKS creation)
+
+This guide contains **all steps we executed end-to-end**.
+
+---
+
+# ✅ Architecture Overview
+
+```
+React (Frontend)
+       │
+Ingress (NGINX)
+       │
+/ → Frontend Service → Frontend Pods
+/api → Backend Service → Backend Pods → MongoDB Atlas
+```
+
+---
+
+# ✅ Step 1 — Install Docker & Enable Daemon
+
+1. Install Docker Desktop on macOS
+2. Start Docker daemon:
+
+```
+docker ps
+```
+
+If daemon not running:
+
+```
+sudo systemctl start docker   # Linux
+```
+
+---
+
+# ✅ Step 2 — Start Jenkins (optional for CI/CD)
+
+```
+docker pull jenkins/jenkins:lts
+```
+
+If error:
+
+```
+Cannot connect to the Docker daemon
+```
+
+→ Start Docker.
+
+---
+
+# ✅ Step 3 — Create 3-Tier Application
+
+### ✅ Tech Stack Selected
+
+* **Frontend:** React
+* **Backend:** Node.js + Express
+* **Database:** MongoDB Atlas
+* **DevOps Tools:** Docker, Kubernetes, Azure
+
+---
+
+# ✅ Step 4 — Create Backend
+
+### Folder Structure
+
+```
+backend/
+  ├── server.js
+  ├── package.json
+  ├── Dockerfile
+```
+
+### server.js Example
+
+```js
+const express = require("express");
+const mongoose = require("mongoose");
+const app = express();
+app.use(express.json());
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK ✅", mongo: mongoose.connection.readyState });
+});
+
+app.get("/api/messages", async (req, res) => {
+  const msgs = await Message.find();
+  res.json(msgs);
+});
+
+app.post("/api/messages", async (req, res) => {
+  const msg = await Message.create({ text: req.body.text });
+  res.json(msg);
+});
+
+mongoose.connect(process.env.MONGO_URL).then(() => {
+  console.log("✅ MongoDB connected");
+  app.listen(5000, () => console.log("🚀 Backend running at http://localhost:5000"));
+});
+```
+
+### Dockerfile
+
+```Dockerfile
+FROM node:18
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+---
+
+# ✅ Step 5 — Create Frontend
+
+```
+frontend/
+  ├── src/App.jsx
+  ├── Dockerfile
+```
+
+### Updated App.jsx
+
+Uses relative paths for Kubernetes:
+
+```js
+fetch("/api/messages")
+```
+
+### Dockerfile
+
+```Dockerfile
+FROM node:18-alpine as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+```
+
+---
+
+# ✅ Step 6 — Create MongoDB Atlas Cluster
+
+1. Create project in MongoDB Atlas
+2. Whitelist:
+
+   * Local IP for initial dev
+   * Later, AKS outbound public IP
+3. Create database user
+4. Copy connection string → `MONGO_URL`
+
+---
+
+# ✅ Step 7 — Build AMD64 Images (for AKS)
+
+Mac M1/M2 builds ARM images → AKS needs AMD64.
+
+```
+docker buildx create --use
+
+# Backend
+docker buildx build --platform linux/amd64 -t 3tieracr.azurecr.io/backend-app:v1 --push .
+
+# Frontend
+docker buildx build --platform linux/amd64 -t 3tieracr.azurecr.io/frontend-app:v1 --push .
+```
+
+---
+
+# ✅ Step 8 — Create Azure Resources Using Terraform
+
+### main.tf
+
+Includes:
+
+* Resource Group
+* ACR
+* AKS
+
+```
+terraform init
+terraform apply
+```
+
+---
+
+# ✅ Step 9 — Give AKS Access to ACR
+
+```
+az aks update --resource-group three-tier-rg --name three-tier-aks --attach-acr 3tieracr
+```
+
+---
+
+# ✅ Step 10 — Connect kubectl to AKS
+
+```
+az aks get-credentials -g three-tier-rg -n three-tier-aks
+```
+
+---
+
+# ✅ Step 11 — Create Namespace
+
+```
+kubectl create namespace three-tier
+```
+
+---
+
+# ✅ Step 12 — Store MongoDB URL in Kubernetes Secret
+
+```
+kubectl create secret generic mongodb-secret \
+  --from-literal=MONGO_URL="<mongo-url>" \
+  -n three-tier
+```
+
+---
+
+# ✅ Step 13 — Deploy Backend
+
+### backend.yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: three-tier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: 3tieracr.azurecr.io/backend-app:v2
+        env:
+        - name: MONGO_URL
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: MONGO_URL
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-svc
+  namespace: three-tier
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP
+```
+
+Apply:
+
+```
+kubectl apply -f backend.yaml
+```
+
+---
+
+# ✅ Step 14 — Deploy Frontend
+
+### frontend.yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: three-tier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: 3tieracr.azurecr.io/frontend-app:v3
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc
+  namespace: three-tier
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+```
+
+Apply:
+
+```
+kubectl apply -f frontend.yaml
+```
+
+---
+
+# ✅ Step 15 — Install NGINX Ingress Controller
+
+```
+kubectl create namespace ingress-nginx
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm install nginx-ingress ingress-nginx/ingress-nginx -n ingress-nginx --set controller.publishService.enabled=true
+```
+
+---
+
+# ✅ Step 16 — Create Ingress
+
+### ingress.yaml
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: three-tier-ingress
+  namespace: three-tier
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /api/?(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-svc
+            port:
+              number: 5000
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-svc
+            port:
+              number: 80
+```
+
+Apply:
+
+```
+kubectl apply -f ingress.yaml
+```
+
+---
+
+# ✅ Step 17 — Get Public IP
+
+```
+kubectl get svc -n ingress-nginx
+```
+
+Open in browser:
+
+```
+http://<public-ip>/
+http://<public-ip>/api/health
+```
+
+---
+
+# ✅ Step 18 — Final Working App 🎉
+
+✅ Frontend loads
+✅ Backend health OK
+✅ MongoDB connected
+✅ Messages can be created/read
+✅ Fully working end-to-end application
+✅ Production-ready cloud-native deployment
+
+---
+
+# ✅ Enhancements (Next Steps)
+
+* Add Jenkins or GitHub Actions CI/CD
+* Add HPA (Horizontal Pod Autoscaler)
+* Add HTTPS via cert-manager + Let’s Encrypt
+* Add Azure Key Vault for secrets
+* Add Terraform for full infra automation
+
+---
+
+# ✅ Author
+
+**Preetham Darshanala**
+DevOps Engineer | Cloud | Kubernetes | CI/CD | Azure
+
+---
+
+# ✅ End of Project — Congratulations 🎉
+
+You completed a full production-level 3-tier deployment on AKS!
