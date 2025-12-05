@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: budget-ui
+  namespace: three-tier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: budget-ui
+  template:
+    metadata:
+      labels:
+        app: budget-ui
+    spec:
+      containers:
+      - name: budget-ui
+        image: 3tieracr.azurecr.io/budget-ui:v1
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: budget-ui-svc
+  namespace: three-tier
+spec:
+  selector:
+    app: budget-ui
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>50-30-20 Salary Budget Tracker (₹ INR)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&400&display=swap');
+
+    :root {
+      --background: #ffffff;
+      --text-primary: #374151;
+      --text-secondary: #6b7280;
+      --card-bg: #f9fafb;
+      --border-radius: 12px;
+      --shadow: 0 5px 15px rgba(0,0,0,0.07);
+      --primary-blue: #2563eb;
+      --needs-color: #2563eb;
+      --wants-color: #60a5fa;
+      --savings-color: #93c5fd;
+      --expense-needs-color: #1e40af;
+      --expense-wants-color: #3b82f6;
+      --expense-savings-color: #bfdbfe;
+      --green: #16a34a;
+      --red: #dc2626;
+      --input-border: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--background);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1rem 4rem;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    header {
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 3rem;
+      display: flex;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 2.5rem;
+      color: var(--primary-blue);
+      user-select: none;
+      letter-spacing: 1px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 1100px;
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 2rem 3rem 3rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-gap: 3rem;
+      align-items: start;
+    }
+
+    /* Responsive stack for narrow screens */
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 2rem 1.5rem 2.5rem;
+      }
+    }
+
+    /* Section styles */
+    section {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 3px 9px rgba(37, 99, 235, 0.1);
+      padding: 1.8rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    section h2 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--primary-blue);
+    }
+
+    /* Salary input and allocation display */
+    #salaryInput {
+      font-size: 1.15rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      border: 2px solid var(--input-border);
+      width: 160px;
+      font-weight: 600;
+      transition: border-color 0.3s;
+    }
+    #salaryInput:focus {
+      border-color: var(--primary-blue);
+      outline: none;
+      box-shadow: 0 0 5px var(--primary-blue);
+    }
+
+    /* Allocation summary card */
+    .allocation-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    @media (max-width: 520px) {
+      .allocation-summary {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .allocation-card {
+      background: var(--card-bg);
+      padding: 1.3rem 1.5rem;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      text-align: center;
+      font-weight: 600;
+      transition: box-shadow 0.3s ease;
+      cursor: default;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .allocation-card:hover {
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+    }
+
+    .allocation-label {
+      font-size: 1.1rem;
+      color: var(--primary-blue);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .allocation-amount {
+      font-size: 1.5rem;
+      color: var(--text-primary);
+      user-select: text;
+    }
+
+    .budget-amount {
+      font-weight: 400;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* Over/Under budget indicator */
+    .status {
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.3rem 0;
+      border-radius: 8px;
+      user-select: none;
+    }
+    .under-budget {
+      color: var(--green);
+    }
+    .over-budget {
+      color: var(--red);
+    }
+
+    /* Expense input form */
+    #expenseForm {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      align-items: flex-end;
+    }
+
+    #expenseForm label {
+      flex: 1 1 100%;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    #expenseForm input[type="text"],
+    #expenseForm input[type="number"],
+    #expenseForm select {
+      flex: 1 1 calc(50% - 0.75rem);
+      padding: 0.5rem 0.75rem;
+      font-size: 1rem;
+      border: 2px solid var(--input-border);
+      border-radius: 8px;
+      transition: border-color 0.3s;
+    }
+    #expenseForm input[type="text"]:focus,
+    #expenseForm input[type="number"]:focus,
+    #expenseForm select:focus {
+      border-color: var(--primary-blue);
+      outline: none;
+      box-shadow: 0 0 6px var(--primary-blue);
+    }
+
+    #expenseForm button {
+      background: var(--primary-blue);
+      border: none;
+      color: white;
+      padding: 0.65rem 1rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      flex: 1 1 100%;
+      max-width: 240px;
+      user-select: none;
+      justify-self: end;
+    }
+    #expenseForm button:hover,
+    #expenseForm button:focus {
+      background: #1D4ED8;
+      outline: none;
+    }
+
+    /* Expense list */
+    .expense-list {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      background: white;
+      padding: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .expense-list ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .expense-list li {
+      padding: 0.3rem 0.1rem;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .expense-list li:last-child {
+      border-bottom: none;
+    }
+
+    .expense-desc {
+      flex: 1;
+      color: var(--text-primary);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .expense-category {
+      flex-shrink: 0;
+      padding: 0.15rem 0.5rem;
+      color: white;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 8px;
+    }
+    .cat-needs { background: var(--needs-color); }
+    .cat-wants { background: var(--wants-color); }
+    .cat-savings { background: var(--savings-color); }
+
+    .expense-amount {
+      flex-shrink: 0;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* Chart container */
+    #chartContainer {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* Accessibility focus states */
+    button:focus,
+    input:focus,
+    select:focus {
+      outline-offset: 2px;
+    }
+
+    /* Previous months section - full width */
+    #prevMonthsSection {
+      grid-column: 1 / -1;
+    }
+
+    /* Previous months form */
+    #prevMonthForm {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr) auto;
+      gap: 1rem;
+      align-items: end;
+      margin-bottom: 1.5rem;
+    }
+    #prevMonthForm label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      color: var(--text-secondary);
+    }
+    #prevMonthForm input[type="text"],
+    #prevMonthForm input[type="number"] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      border: 2px solid var(--input-border);
+      font-size: 1rem;
+      font-weight: 600;
+      transition: border-color 0.3s;
+    }
+    #prevMonthForm input[type="text"]:focus,
+    #prevMonthForm input[type="number"]:focus {
+      border-color: var(--primary-blue);
+      outline: none;
+      box-shadow: 0 0 6px var(--primary-blue);
+    }
+    #prevMonthForm button {
+      background: var(--primary-blue);
+      border: none;
+      color: white;
+      padding: 0.6rem 1rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #prevMonthForm button:hover,
+    #prevMonthForm button:focus {
+      background: #1D4ED8;
+      outline: none;
+    }
+
+    /* Previous months list */
+    #prevMonthsList {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    #prevMonthsList th,
+    #prevMonthsList td {
+      padding: 0.7rem 1.2rem;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: center;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    #prevMonthsList th {
+      background: var(--card-bg);
+      font-weight: 700;
+      user-select: none;
+    }
+    #prevMonthsList tbody tr:hover {
+      background: #eff6ff;
+    }
+    
+    #prevMonthsList .delete-btn {
+      background: var(--red);
+      color: white;
+      border: none;
+      padding: 0.3rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: background-color 0.2s;
+    }
+    #prevMonthsList .delete-btn:hover,
+    #prevMonthsList .delete-btn:focus {
+      background: #b91c1c; /* Darker red on hover/focus */
+      outline: none;
+    }
+
+    /* Status color badges in previous months table */
+    .status-badge {
+      padding: 0.15rem 0.7rem;
+      border-radius: 12px;
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+      user-select: none;
+      display: inline-block;
+      min-width: 80px;
+    }
+    .status-badge.under-budget {
+      background: var(--green);
+    }
+    .status-badge.over-budget {
+      background: var(--red);
+    }
+
+  </style>
+</head>
+<body>
+  <header>Salary Budget Tracker</header>
+  <main>
+    <!-- Left side: Salary and input expenses -->
+    <section aria-labelledby="salary-section-header">
+      <h2 id="salary-section-header">Monthly Salary & Budget</h2>
+      <label for="salaryInput">Enter your monthly net salary (₹):</label>
+      <input
+        type="number"
+        id="salaryInput"
+        min="0"
+        placeholder="₹ 30,000"
+        value="30000"
+        aria-describedby="salaryHelp"
+      />
+      <p id="salaryHelp" style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.4rem;">
+        The 50-30-20 budgeting rule will be applied to your salary to set budgets.
+      </p>
+
+      <div class="allocation-summary" aria-label="Budget allocation summary">
+        <article class="allocation-card" id="allocationNeeds" aria-live="polite" role="region" aria-label="Needs budget">
+          <div class="allocation-label">Needs (50%)</div>
+          <div class="allocation-amount" id="budgetNeeds">₹ 15,000</div>
+          <div>Allocated Budget</div>
+          <div class="allocation-amount" id="expenseNeeds">₹ 0</div>
+          <div>Expenses</div>
+          <div class="status" id="statusNeeds" aria-live="polite">Within budget</div>
+        </article>
+        <article class="allocation-card" id="allocationWants" aria-live="polite" role="region" aria-label="Wants budget">
+          <div class="allocation-label">Wants (30%)</div>
+          <div class="allocation-amount" id="budgetWants">₹ 9,000</div>
+          <div>Allocated Budget</div>
+          <div class="allocation-amount" id="expenseWants">₹ 0</div>
+          <div>Expenses</div>
+          <div class="status" id="statusWants" aria-live="polite">Within budget</div>
+        </article>
+        <article class="allocation-card" id="allocationSavings" aria-live="polite" role="region" aria-label="Savings budget">
+          <div class="allocation-label">Savings (20%)</div>
+          <div class="allocation-amount" id="budgetSavings">₹ 6,000</div>
+          <div>Allocated Budget</div>
+          <div class="allocation-amount" id="expenseSavings">₹ 0</div>
+          <div>Expenses</div>
+          <div class="status" id="statusSavings" aria-live="polite">Within budget</div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Right side: Expense input and list -->
+    <section aria-labelledby="expenses-section-header">
+      <h2 id="expenses-section-header">Enter Your Monthly Expenses</h2>
+      <form id="expenseForm" aria-describedby="expenseFormDesc">
+        <label for="descInput">Description</label>
+        <input type="text" id="descInput" required placeholder="e.g. Grocery, Movie, Investment" autocomplete="off" />
+
+        <label for="amountInput">Amount (₹)</label>
+        <input type="number" id="amountInput" min="1" required placeholder="₹ 500" />
+
+        <label for="categorySelect">Category</label>
+        <select id="categorySelect" required>
+          <option value="" disabled selected>Select category</option>
+          <option value="Needs">Needs</option>
+          <option value="Wants">Wants</option>
+          <option value="Savings">Savings</option>
+        </select>
+
+        <button type="submit" aria-label="Add expense">Add Expense</button>
+      </form>
+
+      <div class="expense-list" aria-live="polite" aria-atomic="true">
+        <ul id="expenseList" aria-label="List of added expenses"></ul>
+      </div>
+    </section>
+
+    <!-- Bottom: Pie chart comparing budget allocation and actual expenses -->
+    <section aria-label="Salary allocation and expense comparison chart" style="grid-column: 1 / -1;">
+      <h2>Salary Allocation vs Expenses</h2>
+      <div id="chartContainer">
+        <canvas id="salaryPieChart" role="img" aria-label="Pie chart showing salary allocation and actual expenses comparison"></canvas>
+      </div>
+    </section>
+
+    <!-- Previous months statistics section -->
+    <section id="prevMonthsSection" aria-labelledby="prevMonthsHeader">
+      <h2 id="prevMonthsHeader">Previous Months Statistics</h2>
+
+      <form id="prevMonthForm" aria-describedby="prevMonthFormDesc" novalidate>
+        <div>
+          <label for="monthInput">Month & Year</label>
+          <input type="text" id="monthInput" placeholder="e.g. Sep 2023" autocomplete="off" required pattern="^[A-Za-z]{3,9}\s\d{4}$" aria-describedby="prevMonthFormatHint" />
+          <small id="prevMonthFormatHint" style="color: var(--text-secondary); font-size: 0.75rem;">Format: Month YYYY (e.g. Sep 2023)</small>
+        </div>
+        <div>
+          <label for="prevSalaryInput">Salary (₹)</label>
+          <input type="number" id="prevSalaryInput" min="0" placeholder="30000" required />
+        </div>
+        <div>
+          <label for="prevNeedsInput">Needs Expenses (₹)</label>
+          <input type="number" id="prevNeedsInput" min="0" placeholder="10000" required />
+        </div>
+        <div>
+          <label for="prevWantsInput">Wants Expenses (₹)</label>
+          <input type="number" id="prevWantsInput" min="0" placeholder="5000" required />
+        </div>
+        <div>
+          <label for="prevSavingsInput">Savings (₹)</label>
+          <input type="number" id="prevSavingsInput" min="0" placeholder="5000" required />
+        </div>
+        <div>
+          <button type="submit" aria-label="Add previous month data">Add</button>
+        </div>
+      </form>
+
+      <table id="prevMonthsList" aria-live="polite" aria-atomic="true" summary="Your previous months' salary budget comparisons">
+        <thead>
+          <tr>
+            <th>Month & Year</th>
+            <th>Salary (₹)</th>
+            <th>Needs (₹)</th>
+            <th>Wants (₹)</th>
+            <th>Savings (₹)</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Filled dynamically -->
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Select elements
+    const salaryInput = document.getElementById('salaryInput');
+    const budgetNeedsSpan = document.getElementById('budgetNeeds');
+    const budgetWantsSpan = document.getElementById('budgetWants');
+    const budgetSavingsSpan = document.getElementById('budgetSavings');
+    const expenseNeedsSpan = document.getElementById('expenseNeeds');
+    const expenseWantsSpan = document.getElementById('expenseWants');
+    const expenseSavingsSpan = document.getElementById('expenseSavings');
+    const statusNeeds = document.getElementById('statusNeeds');
+    const statusWants = document.getElementById('statusWants');
+    const statusSavings = document.getElementById('statusSavings');
+
+    const expenseForm = document.getElementById('expenseForm');
+    const descInput = document.getElementById('descInput');
+    const amountInput = document.getElementById('amountInput');
+    const categorySelect = document.getElementById('categorySelect');
+    const expenseList = document.getElementById('expenseList');
+
+    // Previous months elements
+    const prevMonthForm = document.getElementById('prevMonthForm');
+    const monthInput = document.getElementById('monthInput');
+    const prevSalaryInput = document.getElementById('prevSalaryInput');
+    const prevNeedsInput = document.getElementById('prevNeedsInput');
+    const prevWantsInput = document.getElementById('prevWantsInput');
+    const prevSavingsInput = document.getElementById('prevSavingsInput');
+    const prevMonthsListBody = document.querySelector('#prevMonthsList tbody');
+
+    // --- UPDATED: Data storage arrays ---
+    let expenses = [];
+    let prevMonths = [];
+
+    // --- NEW: LocalStorage keys ---
+    const STORAGE_KEYS = {
+        salary: 'budget_app_salary',
+        currentExpenses: 'budget_app_current_expenses',
+        prevMonths: 'budget_app_prev_months'
+    };
+
+
+    // Formatting helper: format number as Indian Rupee with comma separators
+    function formatRupees(num) {
+      return '₹ ' + num.toLocaleString('en-IN', {maximumFractionDigits: 0});
+    }
+
+    // Calculate allocated budgets from salary per 50-30-20
+    function calculateBudget(salary) {
+      return {
+        needs: Math.round(salary * 0.5),
+        wants: Math.round(salary * 0.3),
+        savings: Math.round(salary * 0.2),
+      };
+    }
+
+    // Sum expenses by category
+    function sumExpensesByCategory() {
+      const sum = { needs: 0, wants: 0, savings: 0 };
+      expenses.forEach(({amount, category}) => {
+        if(category === 'Needs') sum.needs += amount;
+        else if(category === 'Wants') sum.wants += amount;
+        else if(category === 'Savings') sum.savings += amount;
+      });
+      return sum;
+    }
+
+    // Update UI allocation and expenses summary
+    function updateSummary() {
+      const salary = Number(salaryInput.value) || 0;
+      const budget = calculateBudget(salary);
+      const expenseTotals = sumExpensesByCategory();
+
+      // Update budget display
+      budgetNeedsSpan.textContent = formatRupees(budget.needs);
+      budgetWantsSpan.textContent = formatRupees(budget.wants);
+      budgetSavingsSpan.textContent = formatRupees(budget.savings);
+
+      // Update expense display
+      expenseNeedsSpan.textContent = formatRupees(expenseTotals.needs);
+      expenseWantsSpan.textContent = formatRupees(expenseTotals.wants);
+      expenseSavingsSpan.textContent = formatRupees(expenseTotals.savings);
+
+      // Update status indicators
+      statusNeeds.textContent = expenseTotals.needs <= budget.needs ? 'Within budget' : 'Over budget';
+      statusNeeds.className = 'status ' + (expenseTotals.needs <= budget.needs ? 'under-budget' : 'over-budget');
+      statusWants.textContent = expenseTotals.wants <= budget.wants ? 'Within budget' : 'Over budget';
+      statusWants.className = 'status ' + (expenseTotals.wants <= budget.wants ? 'under-budget' : 'over-budget');
+      statusSavings.textContent = expenseTotals.savings <= budget.savings ? 'Within budget' : 'Over budget';
+      statusSavings.className = 'status ' + (expenseTotals.savings <= budget.savings ? 'under-budget' : 'over-budget');
+
+      updateChart(budget, expenseTotals);
+    }
+
+    // Render expense list in the UI with category color badges
+    function renderExpenseList() {
+      if (expenses.length === 0) {
+        expenseList.innerHTML = '<li style="color:' + varToRgb('--text-secondary') + ';">No expenses added yet.</li>';
+        return;
+      }
+      expenseList.innerHTML = '';
+      expenses.forEach((exp, idx) => {
+        const li = document.createElement('li');
+
+        const descDiv = document.createElement('div');
+        descDiv.className = 'expense-desc';
+        descDiv.textContent = exp.description;
+        li.appendChild(descDiv);
+
+        const catDiv = document.createElement('div');
+        catDiv.className = 'expense-category ' + 
+          (exp.category === 'Needs' ? 'cat-needs' :
+          exp.category === 'Wants' ? 'cat-wants' :
+          'cat-savings');
+        catDiv.textContent = exp.category;
+        li.appendChild(catDiv);
+
+        const amountDiv = document.createElement('div');
+        amountDiv.className = 'expense-amount';
+        amountDiv.textContent = formatRupees(exp.amount);
+        li.appendChild(amountDiv);
+
+        // Delete button
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '✕';
+        delBtn.title = 'Remove expense';
+        delBtn.style.background = 'none';
+        delBtn.style.border = 'none';
+        delBtn.style.color = 'var(--red)';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.fontWeight = '700';
+        delBtn.style.fontSize = '1rem';
+        delBtn.setAttribute('aria-label', 'Remove expense: ' + exp.description + ', ' + formatRupees(exp.amount));
+        delBtn.addEventListener('click', () => {
+          expenses.splice(idx, 1);
+          saveCurrentExpenses(); // <-- UPDATED: Save after deleting
+          renderExpenseList();
+          updateSummary();
+        });
+        li.appendChild(delBtn);
+
+        expenseList.appendChild(li);
+      });
+    }
+
+    // Get CSS variable value as rgb string fallback text color
+    function varToRgb(varName) {
+      return getComputedStyle(document.documentElement).getPropertyValue(varName) || '#6b7280';
+    }
+
+    // Initialize Chart.js pie chart to compare budget and expenses side by side
+    const ctx = document.getElementById('salaryPieChart').getContext('2d');
+    const pieChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Needs', 'Wants', 'Savings'],
+        datasets: [
+          {
+            label: 'Budget Allocation',
+            data: [15000, 9000, 6000],
+            backgroundColor: [
+              'rgba(37, 99, 235, 0.7)',   // Needs blue
+              'rgba(96, 165, 250, 0.6)',  // Wants light blue
+              'rgba(147, 197, 253, 0.5)'  // Savings lighter blue
+            ],
+            borderColor: 'white',
+            borderWidth: 2,
+            weight: 1,
+            circumference: 360,
+            rotation: 0,
+            cutout: '60%',
+          },
+          {
+            label: 'Actual Expenses',
+            data: [0, 0, 0],
+            backgroundColor: [
+              'rgba(30, 64, 175, 0.9)',  // Expense needs deeper blue
+              'rgba(59, 130, 246, 0.9)', // Expense wants deeper light blue
+              'rgba(191, 219, 254, 0.9)' // Expense savings pale blue
+            ],
+            borderColor: 'white',
+            borderWidth: 2,
+            weight: 2,
+            circumference: 360,
+            rotation: 0,
+            cutout: '40%',
+          },
+        ]
+      },
+      options: {
+        responsive: true,
+        cutout: '50%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: {size: 14, weight: '600'},
+              color: varToRgb('--text-primary'),
+              padding: 16,
+            },
+            onClick: null // Disable toggle on legend to keep clarity
+          },
+          tooltip: {
+            enabled: true,
+            callbacks: {
+              label: ctx => {
+                return ctx.dataset.label + ': ' + formatRupees(ctx.parsed);
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Update pie chart data sets
+    function updateChart(budget, expenses) {
+      pieChart.data.datasets[0].data = [budget.needs, budget.wants, budget.savings];
+      pieChart.data.datasets[1].data = [expenses.needs, expenses.wants, expenses.savings];
+      pieChart.update();
+    }
+    
+    // --- NEW: Data Persistence Functions ---
+
+    function saveSalary() {
+        localStorage.setItem(STORAGE_KEYS.salary, salaryInput.value);
+    }
+    function loadSalary() {
+        const savedSalary = localStorage.getItem(STORAGE_KEYS.salary);
+        if (savedSalary !== null) {
+            salaryInput.value = savedSalary;
+        }
+    }
+    
+    function saveCurrentExpenses() {
+        localStorage.setItem(STORAGE_KEYS.currentExpenses, JSON.stringify(expenses));
+    }
+    function loadCurrentExpenses() {
+        const savedExpenses = localStorage.getItem(STORAGE_KEYS.currentExpenses);
+        if (savedExpenses) {
+            try {
+                expenses = JSON.parse(savedExpenses) || [];
+            } catch (e) {
+                console.error("Error parsing current expenses from localStorage", e);
+                expenses = [];
+            }
+        }
+    }
+
+    function savePrevMonths() {
+        localStorage.setItem(STORAGE_KEYS.prevMonths, JSON.stringify(prevMonths));
+    }
+    function loadPrevMonths() {
+        const stored = localStorage.getItem(STORAGE_KEYS.prevMonths);
+        if (stored) {
+            try {
+                prevMonths = JSON.parse(stored) || [];
+            } catch (e) {
+                console.error("Error parsing previous months from localStorage", e);
+                prevMonths = [];
+            }
+        }
+    }
+
+    // Handle salary input changes
+    salaryInput.addEventListener('input', () => {
+      updateSummary();
+      saveSalary(); // <-- UPDATED: Save on change
+    });
+
+    // Handle expense form submission
+    expenseForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const desc = descInput.value.trim();
+      const amount = parseFloat(amountInput.value);
+      const category = categorySelect.value;
+
+      if (!desc || isNaN(amount) || amount <= 0 || !category) {
+        alert('Please enter valid expense details.');
+        return;
+      }
+
+      // Add expense to array
+      expenses.push({ description: desc, amount: amount, category: category });
+      saveCurrentExpenses(); // <-- UPDATED: Save after adding
+
+      // Clear inputs
+      descInput.value = '';
+      amountInput.value = '';
+      categorySelect.value = '';
+
+      // Update expense list and summary
+      renderExpenseList();
+      updateSummary();
+
+      descInput.focus();
+    });
+
+    // Render Previous months list
+    function renderPrevMonths() {
+      prevMonthsListBody.innerHTML = '';
+      if(prevMonths.length === 0) {
+        prevMonthsListBody.innerHTML = '<tr><td colspan="7" style="color: var(--text-secondary); font-style: italic;">No previous months data added.</td></tr>';
+        return;
+      }
+
+      prevMonths.forEach((monthData, idx) => {
+        const budget = calculateBudget(monthData.salary);
+        
+        // Determine overall status per category
+        const needsStatus = monthData.needs <= budget.needs ? 'under-budget' : 'over-budget';
+        const wantsStatus = monthData.wants <= budget.wants ? 'under-budget' : 'over-budget';
+        const savingsStatus = monthData.savings <= budget.savings ? 'under-budget' : 'over-budget';
+
+        // Overall status: if all categories within budget, 'Within Budget' else 'Over Budget'
+        const overallStatus = (needsStatus === 'under-budget' && wantsStatus === 'under-budget' && savingsStatus === 'under-budget')
+          ? 'Within Budget'
+          : 'Over Budget';
+
+        const tr = document.createElement('tr');
+
+        const monthTd = document.createElement('td');
+        monthTd.textContent = monthData.monthYear;
+        tr.appendChild(monthTd);
+
+        const salaryTd = document.createElement('td');
+        salaryTd.textContent = formatRupees(monthData.salary);
+        tr.appendChild(salaryTd);
+
+        const needsTd = document.createElement('td');
+        needsTd.textContent = formatRupees(monthData.needs);
+        needsTd.title = needsStatus === 'under-budget' ? 'Within allocated budget' : 'Over allocated budget';
+        needsTd.style.color = needsStatus === 'under-budget' ? 'var(--green)' : 'var(--red)';
+        tr.appendChild(needsTd);
+
+        const wantsTd = document.createElement('td');
+        wantsTd.textContent = formatRupees(monthData.wants);
+        wantsTd.title = wantsStatus === 'under-budget' ? 'Within allocated budget' : 'Over allocated budget';
+        wantsTd.style.color = wantsStatus === 'under-budget' ? 'var(--green)' : 'var(--red)';
+        tr.appendChild(wantsTd);
+
+        const savingsTd = document.createElement('td');
+        savingsTd.textContent = formatRupees(monthData.savings);
+        savingsTd.title = savingsStatus === 'under-budget' ? 'Within allocated budget' : 'Over allocated budget';
+        savingsTd.style.color = savingsStatus === 'under-budget' ? 'var(--green)' : 'var(--red)';
+        tr.appendChild(savingsTd);
+
+        const statusTd = document.createElement('td');
+        const statusBadge = document.createElement('span');
+        statusBadge.className = 'status-badge ' + (overallStatus === 'Within Budget' ? 'under-budget' : 'over-budget');
+        statusBadge.textContent = overallStatus;
+        statusTd.appendChild(statusBadge);
+        tr.appendChild(statusTd);
+
+        const actionTd = document.createElement('td');
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.title = `Delete data for ${monthData.monthYear}`;
+        deleteBtn.setAttribute('aria-label', `Delete data for ${monthData.monthYear}`);
+        deleteBtn.addEventListener('click', () => {
+          if (confirm(`Are you sure you want to delete the data for ${monthData.monthYear}?`)) {
+              prevMonths.splice(idx, 1);
+              savePrevMonths();
+              renderPrevMonths();
+          }
+        });
+        actionTd.appendChild(deleteBtn);
+        tr.appendChild(actionTd);
+
+        prevMonthsListBody.appendChild(tr);
+      });
+    }
+
+    // Handle previous months form
+    prevMonthForm.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const monthYear = monthInput.value.trim();
+      const salary = parseFloat(prevSalaryInput.value);
+      const needs = parseFloat(prevNeedsInput.value);
+      const wants = parseFloat(prevWantsInput.value);
+      const savings = parseFloat(prevSavingsInput.value);
+
+      const monthYearPattern = /^[A-Za-z]{3,9}\s\d{4}$/;
+      if(!monthYearPattern.test(monthYear)) {
+        alert('Please enter Month & Year in correct format like "Sep 2023".');
+        monthInput.focus();
+        return;
+      }
+      if(isNaN(salary) || salary < 0) {
+        alert('Please enter a valid salary amount.');
+        prevSalaryInput.focus();
+        return;
+      }
+      if(isNaN(needs) || needs < 0 || isNaN(wants) || wants < 0 || isNaN(savings) || savings < 0) {
+        alert('Please enter valid, non-negative expenses amounts for Needs, Wants, and Savings.');
+        prevNeedsInput.focus();
+        return;
+      }
+      if(needs + wants + savings > salary) {
+        if(!confirm('The sum of expenses (Needs + Wants + Savings) exceeds the salary amount. Do you want to proceed?')) {
+          return;
+        }
+      }
+
+      prevMonths.push({
+        monthYear,
+        salary,
+        needs,
+        wants,
+        savings,
+      });
+
+      savePrevMonths();
+      renderPrevMonths();
+
+      monthInput.value = '';
+      prevSalaryInput.value = '';
+      prevNeedsInput.value = '';
+      prevWantsInput.value = '';
+      prevSavingsInput.value = '';
+
+      monthInput.focus();
+    });
+
+    // --- UPDATED: Initialization Function ---
+    function init() {
+      // First, load all data from localStorage
+      loadSalary();
+      loadCurrentExpenses();
+      loadPrevMonths();
+      
+      // Then, render the UI with the loaded data
+      renderPrevMonths();
+      renderExpenseList();
+      updateSummary();
+    }
+
+    // Run the app
+    init();
+
+  </script>
+
+</body>
+</html>

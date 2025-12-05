@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: three-tier-ingress
+  namespace: three-tier
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      # Backend API
+      - path: /api(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: backend-svc
+            port:
+              number: 5000
+
+      # Budget UI
+      - path: /budget(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: budget-ui-svc
+            port:
+              number: 80
+
+      # React Frontend - catch all
+      - path: /(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: frontend-svc
+            port:
+              number: 80
+
