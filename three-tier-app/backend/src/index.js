@@ -7,7 +7,7 @@ app.use(express.json());
 app.use(cors());
 
 // ✅ MongoDB connection
-const MONGO_URL = "mongodb+srv://myuser:mypassword123@three-tier-db.ttyh5om.mongodb.net/?appName=three-tier-db";
+const MONGO_URL = "";
 
 mongoose
   .connect(MONGO_URL)
